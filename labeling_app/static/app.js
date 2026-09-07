@@ -2,8 +2,15 @@
  * KCMS Collaborative Labeler - Client Application Logic
  */
 
+let storedSessionId = localStorage.getItem("kcms_session_id");
+if (!storedSessionId) {
+  storedSessionId = "sess_" + Math.random().toString(36).substring(2, 10) + "_" + Date.now();
+  localStorage.setItem("kcms_session_id", storedSessionId);
+}
+
 // Application State
 const state = {
+  sessionId: storedSessionId,
   annotator: localStorage.getItem("kcms_annotator") || "",
   currentComment: null,
   selectedSeverity: null,
@@ -184,13 +191,16 @@ async function fetchNextComment() {
     const res = await fetch("/api/claim", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ annotator: state.annotator }),
+      body: JSON.stringify({
+        annotator: state.annotator,
+        session_id: state.sessionId,
+      }),
     });
 
     if (!res.ok) throw new Error("Failed to claim comment");
 
     const data = await res.json();
-    if (!data.has_comment) {
+    if (!data.has_comment || !data.comment) {
       showCompleted();
       return;
     }
@@ -206,7 +216,8 @@ async function fetchNextComment() {
 function renderComment(comment) {
   state.currentComment = comment;
 
-  el.badgeCommentId.textContent = `ID: ${comment.comment_id}`;
+  const itemProgress = comment.row_index ? `Item #${comment.row_index} of ${comment.total_count}` : `ID: ${comment.comment_id}`;
+  el.badgeCommentId.textContent = itemProgress;
   el.badgeSplit.textContent = `Split: ${comment.split || "train"}`;
   
   if (comment.link_flagged) {
@@ -258,6 +269,7 @@ async function sendHeartbeat() {
       body: JSON.stringify({
         comment_id: state.currentComment.comment_id,
         annotator: state.annotator,
+        session_id: state.sessionId,
       }),
     });
   } catch (e) {
@@ -313,6 +325,7 @@ async function submitCurrentLabel() {
   const payload = {
     comment_id: state.currentComment.comment_id,
     annotator: state.annotator,
+    session_id: state.sessionId,
     severity_id: state.selectedSeverity,
     target_id: state.selectedTarget,
     has_pii: el.checkPII.checked,
@@ -355,6 +368,7 @@ async function skipCurrentComment() {
       body: JSON.stringify({
         comment_id: state.currentComment.comment_id,
         annotator: state.annotator,
+        session_id: state.sessionId,
       }),
     });
     fetchNextComment();

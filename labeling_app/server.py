@@ -49,14 +49,17 @@ LEASE_TIMEOUT_SECONDS = 300  # 5 minutes
 # ---------------------------------------------------------------------------
 class ClaimRequest(BaseModel):
     annotator: str = Field(..., min_length=1)
+    session_id: Optional[str] = None
 
 class HeartbeatRequest(BaseModel):
     comment_id: str
     annotator: str
+    session_id: Optional[str] = None
 
 class SubmitRequest(BaseModel):
     comment_id: str
     annotator: str = Field(..., min_length=1)
+    session_id: Optional[str] = None
     severity_id: int = Field(..., ge=0, le=2)
     target_id: int = Field(..., ge=0, le=2)
     has_pii: bool = False
@@ -65,6 +68,7 @@ class SubmitRequest(BaseModel):
 class SkipRequest(BaseModel):
     comment_id: str
     annotator: str
+    session_id: Optional[str] = None
 
 class EditRequest(BaseModel):
     comment_id: str
@@ -82,7 +86,7 @@ class LabelStore:
         self.primary_csv = primary_csv
         self.mirror_csv = mirror_csv
         self.lock = threading.Lock()
-        # Active leases: comment_id -> {"annotator": str, "timestamp": float}
+        # Active leases: comment_id -> {"annotator": str, "session_id": str, "timestamp": float}
         self.leases: dict[str, dict[str, Any]] = {}
         self.df: pd.DataFrame = self._load_data()
 
@@ -92,6 +96,20 @@ class LabelStore:
         
         df = pd.read_csv(self.primary_csv, dtype={"comment_id": str})
         
+        # Guarantee comment_id is 100% unique
+        if "comment_id" not in df.columns or df["comment_id"].isna().any() or df["comment_id"].duplicated().any():
+            seen = {}
+            new_ids = []
+            for cid in df.get("comment_id", [f"c_{i}" for i in range(len(df))]):
+                cid_str = str(cid) if pd.notna(cid) and str(cid).strip() else "c"
+                if cid_str not in seen:
+                    seen[cid_str] = 1
+                    new_ids.append(cid_str)
+                else:
+                    seen[cid_str] += 1
+                    new_ids.append(f"{cid_str}_{seen[cid_str]}")
+            df["comment_id"] = new_ids
+
         # Ensure schema compliance
         required_defaults = {
             "comment_id": "",
@@ -108,8 +126,8 @@ class LabelStore:
             if col not in df.columns:
                 df[col] = default_val
             else:
-                if col == "annotator" or col == "notes":
-                    df[col] = df[col].fillna("").astype(str)
+                if col in ("annotator", "notes"):
+                    df[col] = df[col].fillna("").astype(str).str.strip()
                 elif col in ("severity_id", "target_id"):
                     df[col] = df[col].fillna(0).astype(int)
                 elif col in ("has_pii", "link_flagged"):
@@ -117,6 +135,15 @@ class LabelStore:
                 else:
                     df[col] = df[col].fillna(default_val)
         return df
+
+    def _is_unlabeled(self, annotator_val: Any) -> bool:
+        if pd.isna(annotator_val):
+            return True
+        s = str(annotator_val).strip().lower()
+        return s == "" or s == "nan" or s == "none"
+
+    def _get_unlabeled_indices(self) -> list[int]:
+        return [idx for idx, ann in self.df["annotator"].items() if self._is_unlabeled(ann)]
 
     def _clean_expired_leases(self) -> None:
         now = time.time()
@@ -145,25 +172,28 @@ class LabelStore:
         with self.lock:
             self._clean_expired_leases()
             total = len(self.df)
-            is_labeled = self.df["annotator"].str.strip() != ""
-            labeled_count = int(is_labeled.sum())
-            remaining_count = total - labeled_count
+            unlabeled_indices = self._get_unlabeled_indices()
+            remaining_count = len(unlabeled_indices)
+            labeled_count = total - remaining_count
+
+            is_labeled = [not self._is_unlabeled(ann) for ann in self.df["annotator"]]
+            labeled_df = self.df[is_labeled]
 
             # Leaderboard by annotator
             annotator_counts = (
-                self.df[is_labeled]["annotator"]
+                labeled_df["annotator"]
                 .value_counts()
                 .to_dict()
             )
 
             # Class distribution
             severity_counts = (
-                self.df[is_labeled]["severity_id"]
+                labeled_df["severity_id"]
                 .value_counts()
                 .to_dict()
             )
             target_counts = (
-                self.df[is_labeled]["target_id"]
+                labeled_df["target_id"]
                 .value_counts()
                 .to_dict()
             )
@@ -191,43 +221,57 @@ class LabelStore:
                 "active_labelers": active_labelers,
             }
 
-    def claim_comment(self, annotator: str) -> Optional[dict[str, Any]]:
+    def claim_comment(self, annotator: str, session_id: Optional[str] = None) -> Optional[dict[str, Any]]:
         with self.lock:
             self._clean_expired_leases()
             now = time.time()
 
-            # Check if this annotator already has an active lease
+            # 1. Check if this annotator or session already holds an active lease
             for cid, lease in self.leases.items():
-                if lease["annotator"] == annotator:
+                match = False
+                if session_id and lease.get("session_id") == session_id:
+                    match = True
+                elif not session_id and lease.get("annotator") == annotator:
+                    match = True
+                
+                if match:
                     lease["timestamp"] = now  # Refresh lease
                     row = self.df[self.df["comment_id"] == cid].iloc[0]
                     return self._format_comment_response(row)
 
-            # Find unlabelled comments not currently leased
-            is_unlabeled = self.df["annotator"].str.strip() == ""
-            unlabeled_df = self.df[is_unlabeled]
+            # 2. Find strictly unlabelled comments not currently leased
+            unlabeled_indices = self._get_unlabeled_indices()
 
-            for _, row in unlabeled_df.iterrows():
+            for idx in unlabeled_indices:
+                row = self.df.iloc[idx]
                 cid = str(row["comment_id"])
                 if cid not in self.leases:
-                    # Lease this comment
-                    self.leases[cid] = {"annotator": annotator, "timestamp": now}
+                    # Lease this comment exclusively
+                    self.leases[cid] = {
+                        "annotator": annotator,
+                        "session_id": session_id or annotator,
+                        "timestamp": now,
+                    }
                     return self._format_comment_response(row)
 
-            # All comments are labeled or currently leased
+            # All comments are either labeled or currently leased
             return None
 
-    def refresh_lease(self, comment_id: str, annotator: str) -> bool:
+    def refresh_lease(self, comment_id: str, annotator: str, session_id: Optional[str] = None) -> bool:
         with self.lock:
-            if comment_id in self.leases and self.leases[comment_id]["annotator"] == annotator:
-                self.leases[comment_id]["timestamp"] = time.time()
-                return True
+            if comment_id in self.leases:
+                lease = self.leases[comment_id]
+                if (session_id and lease.get("session_id") == session_id) or lease.get("annotator") == annotator:
+                    lease["timestamp"] = time.time()
+                    return True
             return False
 
-    def release_lease(self, comment_id: str, annotator: str) -> None:
+    def release_lease(self, comment_id: str, annotator: str, session_id: Optional[str] = None) -> None:
         with self.lock:
-            if comment_id in self.leases and self.leases[comment_id]["annotator"] == annotator:
-                del self.leases[comment_id]
+            if comment_id in self.leases:
+                lease = self.leases[comment_id]
+                if (session_id and lease.get("session_id") == session_id) or lease.get("annotator") == annotator:
+                    del self.leases[comment_id]
 
     def submit_label(
         self,
@@ -266,6 +310,9 @@ class LabelStore:
             return [self._format_comment_response(row) for _, row in recent.iterrows()]
 
     def _format_comment_response(self, row: pd.Series) -> dict[str, Any]:
+        row_idx = int(row.name) if isinstance(row.name, (int, float)) else 0
+        total_comments = len(self.df)
+        unlabeled_count = len(self._get_unlabeled_indices())
         return {
             "comment_id": str(row["comment_id"]),
             "text": str(row["text"]),
@@ -276,6 +323,9 @@ class LabelStore:
             "annotator": str(row.get("annotator", "")),
             "notes": str(row.get("notes", "")),
             "split": str(row.get("split", "train")),
+            "row_index": row_idx + 1,
+            "total_count": total_comments,
+            "remaining_unlabeled": unlabeled_count,
         }
 
 
@@ -306,19 +356,19 @@ def claim_comment(payload: ClaimRequest):
     annotator = payload.annotator.strip()
     if not annotator:
         raise HTTPException(status_code=400, detail="Annotator name cannot be empty")
-    comment = store.claim_comment(annotator)
+    comment = store.claim_comment(annotator, payload.session_id)
     return {"has_comment": comment is not None, "comment": comment}
 
 
 @app.post("/api/heartbeat")
 def heartbeat(payload: HeartbeatRequest):
-    refreshed = store.refresh_lease(payload.comment_id, payload.annotator)
+    refreshed = store.refresh_lease(payload.comment_id, payload.annotator, payload.session_id)
     return {"refreshed": refreshed}
 
 
 @app.post("/api/skip")
 def skip_comment(payload: SkipRequest):
-    store.release_lease(payload.comment_id, payload.annotator)
+    store.release_lease(payload.comment_id, payload.annotator, payload.session_id)
     return {"status": "skipped"}
 
 
@@ -336,7 +386,7 @@ def submit_label(payload: SubmitRequest):
         raise HTTPException(status_code=404, detail="Comment ID not found")
     
     # Return next comment immediately for fast keyboard flow
-    next_comment = store.claim_comment(payload.annotator)
+    next_comment = store.claim_comment(payload.annotator, payload.session_id)
     return {
         "status": "saved",
         "has_next": next_comment is not None,
