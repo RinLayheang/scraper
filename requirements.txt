@@ -1,0 +1,2 @@
+seleniumbase>=4.0.0
+customtkinter>=5.2.0
