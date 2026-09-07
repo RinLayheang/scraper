@@ -44,6 +44,17 @@
 
     <!-- Right User Controls -->
     <div class="header-right">
+      <!-- Music Audio Controls -->
+      <div class="music-pill" id="musicPill" title="Background Music">
+        <button class="music-toggle-btn" id="btnMusicToggle" title="Mute / Unmute Music (Hotkey: M)">
+          <span class="music-icon" id="musicIcon">🔊</span>
+        </button>
+        <div class="music-volume-container">
+          <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.35" class="music-slider" title="Adjust Music Volume">
+          <span class="volume-label" id="volumeLabel">35%</span>
+        </div>
+      </div>
+
       <div class="user-pill" id="userPill" title="Click to change name">
         <span class="user-avatar">👤</span>
         <span class="user-name" id="displayAnnotator">Labeler</span>
@@ -107,53 +118,56 @@
         <!-- Annotation Options Card -->
         <section class="controls-card">
           
-          <!-- Axis 1: Severity -->
-          <div class="axis-group">
-            <div class="axis-header">
-              <span class="axis-title">1. Severity Axis</span>
-              <span class="axis-hint">Press keys <strong>[1]</strong>, <strong>[2]</strong>, or <strong>[3]</strong></span>
+          <!-- Axes Columns Container (2-Column on Mobile & Desktop responsive) -->
+          <div class="axes-columns-wrapper">
+            <!-- Axis 1: Severity -->
+            <div class="axis-group axis-severity">
+              <div class="axis-header">
+                <span class="axis-title">1. Severity Axis</span>
+                <span class="axis-hint">Keys <strong>[1, 2, 3]</strong></span>
+              </div>
+              <div class="btn-grid severity-grid">
+                <button class="option-btn severity-btn safe" data-severity="0" data-key="1">
+                  <span class="hotkey">1</span>
+                  <span class="option-name">SAFE (0)</span>
+                  <span class="option-desc">Normal, neutral, clean opinion</span>
+                </button>
+                <button class="option-btn severity-btn offensive" data-severity="1" data-key="2">
+                  <span class="hotkey">2</span>
+                  <span class="option-name">OFFENSIVE (1)</span>
+                  <span class="option-desc">Profanity, insults, rude, vulgar</span>
+                </button>
+                <button class="option-btn severity-btn harmful" data-severity="2" data-key="3">
+                  <span class="hotkey">3</span>
+                  <span class="option-name">HARMFUL (2)</span>
+                  <span class="option-desc">Threats, violence, hate speech</span>
+                </button>
+              </div>
             </div>
-            <div class="btn-grid severity-grid">
-              <button class="option-btn severity-btn safe" data-severity="0" data-key="1">
-                <span class="hotkey">1</span>
-                <span class="option-name">SAFE (0)</span>
-                <span class="option-desc">Normal, neutral, clean opinion</span>
-              </button>
-              <button class="option-btn severity-btn offensive" data-severity="1" data-key="2">
-                <span class="hotkey">2</span>
-                <span class="option-name">OFFENSIVE (1)</span>
-                <span class="option-desc">Profanity, insults, rude, vulgar</span>
-              </button>
-              <button class="option-btn severity-btn harmful" data-severity="2" data-key="3">
-                <span class="hotkey">3</span>
-                <span class="option-name">HARMFUL (2)</span>
-                <span class="option-desc">Threats, violence, severe hate speech</span>
-              </button>
-            </div>
-          </div>
 
-          <!-- Axis 2: Target -->
-          <div class="axis-group">
-            <div class="axis-header">
-              <span class="axis-title">2. Target Axis</span>
-              <span class="axis-hint">Press keys <strong>[Q]</strong>, <strong>[W]</strong>, or <strong>[E]</strong></span>
-            </div>
-            <div class="btn-grid target-grid">
-              <button class="option-btn target-btn neither" data-target="0" data-key="q">
-                <span class="hotkey">Q</span>
-                <span class="option-name">NEITHER (0)</span>
-                <span class="option-desc">General statement / no specific target</span>
-              </button>
-              <button class="option-btn target-btn person" data-target="1" data-key="w">
-                <span class="hotkey">W</span>
-                <span class="option-name">PERSON (1)</span>
-                <span class="option-desc">Directed at an individual or creator</span>
-              </button>
-              <button class="option-btn target-btn institution" data-target="2" data-key="e">
-                <span class="hotkey">E</span>
-                <span class="option-name">INSTITUTION (2)</span>
-                <span class="option-desc">Organization, company, government</span>
-              </button>
+            <!-- Axis 2: Target -->
+            <div class="axis-group axis-target">
+              <div class="axis-header">
+                <span class="axis-title">2. Target Axis</span>
+                <span class="axis-hint">Keys <strong>[Q, W, E]</strong></span>
+              </div>
+              <div class="btn-grid target-grid">
+                <button class="option-btn target-btn neither" data-target="0" data-key="q">
+                  <span class="hotkey">Q</span>
+                  <span class="option-name">NEITHER (0)</span>
+                  <span class="option-desc">General statement / no target</span>
+                </button>
+                <button class="option-btn target-btn person" data-target="1" data-key="w">
+                  <span class="hotkey">W</span>
+                  <span class="option-name">PERSON (1)</span>
+                  <span class="option-desc">Individual or creator</span>
+                </button>
+                <button class="option-btn target-btn institution" data-target="2" data-key="e">
+                  <span class="hotkey">E</span>
+                  <span class="option-name">INSTITUTION (2)</span>
+                  <span class="option-desc">Org, company, government</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -175,8 +189,11 @@
 
           <!-- Action Submission Bar -->
           <div class="actions-bar">
+            <button class="btn btn-subtle" id="btnQuickHistory" title="View & Edit Previous Comments (Hotkey: H)">
+              📜 History <kbd>H</kbd>
+            </button>
             <button class="btn btn-subtle" id="btnSkip" title="Press [S] to skip">
-              Skip Comment <kbd>S</kbd>
+              Skip <kbd>S</kbd>
             </button>
             <button class="btn btn-primary btn-submit" id="btnSubmit" title="Press [Enter] to submit">
               Submit & Next <kbd>↵ Enter</kbd>
@@ -204,6 +221,9 @@
       <span class="divider">|</span>
       <span><kbd>↵ Enter</kbd> Submit</span>
       <span><kbd>S</kbd> Skip</span>
+      <span class="divider">|</span>
+      <span><kbd>H</kbd> History</span>
+      <span><kbd>M</kbd> Music</span>
     </div>
   </footer>
 
@@ -289,8 +309,97 @@
     </div>
   </div>
 
+  <!-- Modal: Edit Historical Comment -->
+  <div class="modal-overlay hidden" id="editModal">
+    <div class="modal-box modal-wide edit-modal-box">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <button class="btn btn-secondary btn-sm" id="btnBackToHistory" title="Back to history list">
+            ← History
+          </button>
+          <h3 id="editModalTitle">✏️ Edit Label: <span class="id-badge" id="badgeEditId">--</span></h3>
+        </div>
+        <button class="btn-close" id="btnCloseEditModal">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Comment Text Card -->
+        <div class="edit-comment-preview">
+          <p class="khmer-text" id="editCommentText"></p>
+        </div>
+
+        <!-- 2-Column Axis Options -->
+        <div class="axes-columns-wrapper edit-axes-wrapper">
+          <!-- Severity Axis -->
+          <div class="axis-group">
+            <div class="axis-header">
+              <span class="axis-title">1. Severity Axis</span>
+            </div>
+            <div class="btn-grid severity-grid">
+              <button type="button" class="option-btn severity-btn safe" data-edit-sev="0">
+                <span class="option-name">SAFE (0)</span>
+                <span class="option-desc">Normal, neutral, clean</span>
+              </button>
+              <button type="button" class="option-btn severity-btn offensive" data-edit-sev="1">
+                <span class="option-name">OFFENSIVE (1)</span>
+                <span class="option-desc">Profanity, insults, rude</span>
+              </button>
+              <button type="button" class="option-btn severity-btn harmful" data-edit-sev="2">
+                <span class="option-name">HARMFUL (2)</span>
+                <span class="option-desc">Threats, hate speech</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Target Axis -->
+          <div class="axis-group">
+            <div class="axis-header">
+              <span class="axis-title">2. Target Axis</span>
+            </div>
+            <div class="btn-grid target-grid">
+              <button type="button" class="option-btn target-btn neither" data-edit-tgt="0">
+                <span class="option-name">NEITHER (0)</span>
+                <span class="option-desc">General statement</span>
+              </button>
+              <button type="button" class="option-btn target-btn person" data-edit-tgt="1">
+                <span class="option-name">PERSON (1)</span>
+                <span class="option-desc">Individual or creator</span>
+              </button>
+              <button type="button" class="option-btn target-btn institution" data-edit-tgt="2">
+                <span class="option-name">INSTITUTION (2)</span>
+                <span class="option-desc">Org, company, government</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Meta Row -->
+        <div class="meta-row">
+          <label class="toggle-container">
+            <input type="checkbox" id="editCheckPII">
+            <span class="toggle-custom"></span>
+            <span class="toggle-label">
+              <strong>Has PII</strong>
+            </span>
+          </label>
+          <div class="notes-input-wrapper">
+            <input type="text" id="editInputNotes" placeholder="Optional notes / edge-case flags..." class="notes-input">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelEdit">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveEdit">💾 Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div class="toast hidden" id="toast"></div>
+
+  <!-- Background Music Audio Element -->
+  <audio id="bgMusic" src="/sound/lobby-classic-game.mp3" loop preload="auto"></audio>
 
   <script src="app.js"></script>
 </body>

@@ -41,8 +41,8 @@ PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 CLEANED_CSV_PATH = PROJECT_ROOT / "scraper" / "raw_data" / "cleaned_comments.csv"
 AI_ENGINE_CSV_PATH = PROJECT_ROOT / "ai_engine" / "data" / "comments.csv"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-
-LEASE_TIMEOUT_SECONDS = 300  # 5 minutes
+SOUND_DIR = Path(__file__).resolve().parent / "sound"
+LEASE_TIMEOUT_SECONDS = 60  # 60 seconds fail-safe timeout for immediate recycling of unlabelled comments
 
 # ---------------------------------------------------------------------------
 # Pydantic Schemas
@@ -372,6 +372,24 @@ def skip_comment(payload: SkipRequest):
     return {"status": "skipped"}
 
 
+@app.post("/api/release")
+async def release_comment(request: Request):
+    """Instant release endpoint triggered on tab close / beforeunload / pagehide."""
+    try:
+        body = await request.body()
+        if body:
+            import json
+            data = json.loads(body.decode("utf-8"))
+            cid = data.get("comment_id")
+            ann = data.get("annotator", "")
+            sess = data.get("session_id")
+            if cid:
+                store.release_lease(cid, ann, sess)
+    except Exception:
+        pass
+    return {"status": "released"}
+
+
 @app.post("/api/submit")
 def submit_label(payload: SubmitRequest):
     success = store.submit_label(
@@ -422,6 +440,10 @@ def export_csv():
         filename="cleaned_comments_annotated.csv",
     )
 
+
+# Serve Sound Audio Assets
+if SOUND_DIR.exists():
+    app.mount("/sound", StaticFiles(directory=SOUND_DIR), name="sound")
 
 # Serve Frontend Static Assets
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
