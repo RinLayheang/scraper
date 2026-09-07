@@ -1,4 +1,5 @@
-comment_id,text,severity_id,target_id,has_pii,link_flagged,annotator,split,notes,post_text,parent_text,is_reply,created_time,source_page_iddom__0,សម្រាប់អ្នកចង់ស្ដាប់បទពេញ​ អាចចូលតាមលីងខាងក្រោមបាន​ អរគុណ all nob,,,,,,,,,,False,,
+comment_id,text,severity_id,target_id,has_pii,link_flagged,annotator,split,notes,post_text,parent_text,is_reply,created_time,source_page_id
+dom__0,សម្រាប់អ្នកចង់ស្ដាប់បទពេញ​ អាចចូលតាមលីងខាងក្រោមបាន​ អរគុណ all nob,,,,,,,,,,False,,
 dom__1,អូខេ អ្នកឈ្នះ,,,,,,,,,,False,,
 dom__2,កូនខ្មែរម្នាក់ទៀតហើយ...,,,,,,,,,,False,,
 dom__3,ឃើញតាំង ចាស់ណាវ តែទើបដាច់ចិត្តបញ្ចេញមតិ loy nas mii jm,,,,,,,,,,False,,
