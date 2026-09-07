@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KCMS | Collaborative Comment Labeler</title>
+  
+  <!-- Google Fonts: Kantumruy Pro for Khmer, Inter for English UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top Navigation / Progress Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand">
+        <span class="brand-logo">🛡️</span>
+        <div class="brand-text">
+          <h1>KCMS Labeler</h1>
+          <span class="brand-subtitle">Khmer Comment Moderation System</span>
+        </div>
+      </div>
+      <div class="sync-status" id="syncStatus">
+        <span class="status-dot"></span>
+        <span class="status-text">Synced</span>
+      </div>
+    </div>
+
+    <!-- Center Progress Metric -->
+    <div class="header-center">
+      <div class="progress-bar-container">
+        <div class="progress-info">
+          <span class="progress-label">Global Progress</span>
+          <span class="progress-numbers" id="progressNumbers">0 / 0 (0%)</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right User Controls -->
+    <div class="header-right">
+      <div class="user-pill" id="userPill" title="Click to change name">
+        <span class="user-avatar">👤</span>
+        <span class="user-name" id="displayAnnotator">Labeler</span>
+      </div>
+      <button class="btn btn-secondary btn-icon" id="btnHistory" title="My Recent Submissions">
+        📜 History
+      </button>
+      <button class="btn btn-secondary btn-icon" id="btnLeaderboard" title="Team Leaderboard">
+        🏆 Leaderboard
+      </button>
+      <a href="/api/export" class="btn btn-outline btn-icon" title="Download CSV" download>
+        ⬇️ CSV
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="app-main">
+    <div class="workspace-container">
+      
+      <!-- Loading State -->
+      <div class="state-card loading-card" id="loadingCard">
+        <div class="spinner"></div>
+        <p>Leasing next comment from queue...</p>
+      </div>
+
+      <!-- Completed State -->
+      <div class="state-card completed-card hidden" id="completedCard">
+        <div class="completed-icon">🎉</div>
+        <h2>All Comments Labeled!</h2>
+        <p>Congratulations! Every comment in the dataset has been annotated.</p>
+        <div class="completed-actions">
+          <a href="/api/export" class="btn btn-primary" download>Download Labeled CSV</a>
+          <button class="btn btn-secondary" id="btnRefreshStats">Refresh Progress</button>
+        </div>
+      </div>
+
+      <!-- Active Labeling Workspace -->
+      <div class="labeling-workspace hidden" id="labelingWorkspace">
+        
+        <!-- Comment Presentation Card -->
+        <section class="comment-card">
+          <div class="comment-card-header">
+            <div class="meta-tags">
+              <span class="meta-badge id-badge" id="badgeCommentId">ID: --</span>
+              <span class="meta-badge split-badge" id="badgeSplit">Split: train</span>
+              <span class="meta-badge link-badge hidden" id="badgeLink">🔗 Contains Link</span>
+            </div>
+            <div class="lease-timer" id="leaseTimer" title="Time remaining before comment lease expires">
+              ⏱️ <span id="leaseTimerText">5:00</span>
+            </div>
+          </div>
+
+          <div class="comment-text-wrapper">
+            <p class="comment-text khmer-text" id="commentText">
+              <!-- Khmer comment appears here -->
+            </p>
+          </div>
+        </section>
+
+        <!-- Annotation Options Card -->
+        <section class="controls-card">
+          
+          <!-- Axis 1: Severity -->
+          <div class="axis-group">
+            <div class="axis-header">
+              <span class="axis-title">1. Severity Axis</span>
+              <span class="axis-hint">Press keys <strong>[1]</strong>, <strong>[2]</strong>, or <strong>[3]</strong></span>
+            </div>
+            <div class="btn-grid severity-grid">
+              <button class="option-btn severity-btn safe" data-severity="0" data-key="1">
+                <span class="hotkey">1</span>
+                <span class="option-name">SAFE (0)</span>
+                <span class="option-desc">Normal, neutral, clean opinion</span>
+              </button>
+              <button class="option-btn severity-btn offensive" data-severity="1" data-key="2">
+                <span class="hotkey">2</span>
+                <span class="option-name">OFFENSIVE (1)</span>
+                <span class="option-desc">Profanity, insults, rude, vulgar</span>
+              </button>
+              <button class="option-btn severity-btn harmful" data-severity="2" data-key="3">
+                <span class="hotkey">3</span>
+                <span class="option-name">HARMFUL (2)</span>
+                <span class="option-desc">Threats, violence, severe hate speech</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Axis 2: Target -->
+          <div class="axis-group">
+            <div class="axis-header">
+              <span class="axis-title">2. Target Axis</span>
+              <span class="axis-hint">Press keys <strong>[Q]</strong>, <strong>[W]</strong>, or <strong>[E]</strong></span>
+            </div>
+            <div class="btn-grid target-grid">
+              <button class="option-btn target-btn neither" data-target="0" data-key="q">
+                <span class="hotkey">Q</span>
+                <span class="option-name">NEITHER (0)</span>
+                <span class="option-desc">General statement / no specific target</span>
+              </button>
+              <button class="option-btn target-btn person" data-target="1" data-key="w">
+                <span class="hotkey">W</span>
+                <span class="option-name">PERSON (1)</span>
+                <span class="option-desc">Directed at an individual or creator</span>
+              </button>
+              <button class="option-btn target-btn institution" data-target="2" data-key="e">
+                <span class="hotkey">E</span>
+                <span class="option-name">INSTITUTION (2)</span>
+                <span class="option-desc">Organization, company, government</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Meta Toggles & Notes -->
+          <div class="meta-row">
+            <label class="toggle-container" title="Press [P] to toggle">
+              <input type="checkbox" id="checkPII">
+              <span class="toggle-custom"></span>
+              <span class="toggle-label">
+                <strong>[P] Has PII</strong>
+                <small>(Phone, address, citizen ID, private contact)</small>
+              </span>
+            </label>
+
+            <div class="notes-input-wrapper">
+              <input type="text" id="inputNotes" placeholder="Optional notes / edge-case flags..." class="notes-input">
+            </div>
+          </div>
+
+          <!-- Action Submission Bar -->
+          <div class="actions-bar">
+            <button class="btn btn-subtle" id="btnSkip" title="Press [S] to skip">
+              Skip Comment <kbd>S</kbd>
+            </button>
+            <button class="btn btn-primary btn-submit" id="btnSubmit" title="Press [Enter] to submit">
+              Submit & Next <kbd>↵ Enter</kbd>
+            </button>
+          </div>
+
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Hotkey Floating Helper Bar -->
+  <footer class="hotkey-footer">
+    <div class="hotkey-legend">
+      <span><kbd>1</kbd> Safe</span>
+      <span><kbd>2</kbd> Offensive</span>
+      <span><kbd>3</kbd> Harmful</span>
+      <span class="divider">|</span>
+      <span><kbd>Q</kbd> Neither</span>
+      <span><kbd>W</kbd> Person</span>
+      <span><kbd>E</kbd> Institution</span>
+      <span class="divider">|</span>
+      <span><kbd>P</kbd> Toggle PII</span>
+      <span class="divider">|</span>
+      <span><kbd>↵ Enter</kbd> Submit</span>
+      <span><kbd>S</kbd> Skip</span>
+    </div>
+  </footer>
+
+  <!-- Modal: Annotator Name Prompt -->
+  <div class="modal-overlay hidden" id="annotatorModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>👋 Welcome to KCMS Labeler</h3>
+      </div>
+      <div class="modal-body">
+        <p>Please enter your name so your team can attribute your labeled comments and track real-time progress:</p>
+        <input type="text" id="inputAnnotatorName" placeholder="e.g. Oudom, Sophea, Dara..." class="modal-input" autofocus>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btnSaveAnnotator">Start Labeling</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal / Drawer: Team Leaderboard -->
+  <div class="modal-overlay hidden" id="leaderboardModal">
+    <div class="modal-box modal-wide">
+      <div class="modal-header">
+        <h3>🏆 Team Leaderboard & Distribution</h3>
+        <button class="btn-close" id="btnCloseLeaderboard">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="stats-cards-grid">
+          <div class="stat-card">
+            <span class="stat-value" id="statTotalComments">--</span>
+            <span class="stat-label">Total Cleaned</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value text-green" id="statLabeledCount">--</span>
+            <span class="stat-label">Labeled</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value text-amber" id="statRemainingCount">--</span>
+            <span class="stat-label">Remaining</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value text-blue" id="statActiveLeases">--</span>
+            <span class="stat-label">Active Labelers</span>
+          </div>
+        </div>
+
+        <h4>Leaderboard by Contributions</h4>
+        <div class="leaderboard-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Annotator</th>
+                <th>Comments Labeled</th>
+                <th>Contribution %</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardTableBody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Severity Breakdown</h4>
+        <div class="pill-stats-row" id="severityStatsRow"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal / Drawer: My History -->
+  <div class="modal-overlay hidden" id="historyModal">
+    <div class="modal-box modal-wide">
+      <div class="modal-header">
+        <h3>📜 My Recent Labels</h3>
+        <button class="btn-close" id="btnCloseHistory">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtext">Click on any previous comment to quickly fix or adjust your labels:</p>
+        <div class="history-list" id="historyList">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
