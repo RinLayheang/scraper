@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <!-- Top Navigation / Progress Header -->
@@ -398,9 +398,9 @@
   <!-- Toast Notification -->
   <div class="toast hidden" id="toast"></div>
 
-  <!-- Background Music Audio Element -->
-  <audio id="bgMusic" src="/sound/lobby-classic-game.mp3" loop preload="auto"></audio>
+  <!-- Background Music Audio Element (Lazy-loaded on user interaction) -->
+  <audio id="bgMusic" loop preload="none"></audio>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

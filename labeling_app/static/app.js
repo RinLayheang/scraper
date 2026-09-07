@@ -53,6 +53,7 @@ const el = {
   badgeLink: document.getElementById("badgeLink"),
   leaseTimerText: document.getElementById("leaseTimerText"),
   commentText: document.getElementById("commentText"),
+  commentTextWrapper: document.querySelector(".comment-text-wrapper"),
 
   // Form Controls
   severityBtns: document.querySelectorAll(".severity-btn"),
@@ -312,6 +313,9 @@ function renderComment(comment) {
   }
 
   el.commentText.textContent = comment.text;
+  if (el.commentTextWrapper) {
+    el.commentTextWrapper.scrollTop = 0;
+  }
 
   // Reset lease timer (60 seconds)
   startLeaseCountdown(60);
@@ -720,8 +724,17 @@ function initAudio() {
   }
 }
 
+function ensureAudioSource() {
+  if (!el.bgMusic) return;
+  if (!el.bgMusic.getAttribute("src")) {
+    el.bgMusic.src = "/sound/lobby-classic-game.mp3";
+    el.bgMusic.load();
+  }
+}
+
 function playBGM() {
   if (!el.bgMusic) return;
+  ensureAudioSource();
   el.bgMusic
     .play()
     .then(() => {
@@ -738,6 +751,7 @@ function toggleMusicMute() {
   if (!el.bgMusic) return;
 
   if (el.bgMusic.paused || state.bgmMuted) {
+    ensureAudioSource();
     el.bgMusic.muted = false;
     state.bgmMuted = false;
     playBGM();
@@ -745,6 +759,10 @@ function toggleMusicMute() {
   } else {
     el.bgMusic.muted = true;
     state.bgmMuted = true;
+    if (!el.bgMusic.paused) {
+      el.bgMusic.pause();
+    }
+    state.bgmPlaying = false;
     showToast("🔇 Music muted");
   }
 
@@ -761,7 +779,12 @@ function setMusicVolume(val) {
   if (vol === 0) {
     el.bgMusic.muted = true;
     state.bgmMuted = true;
-  } else if (el.bgMusic.muted && vol > 0) {
+    if (!el.bgMusic.paused) {
+      el.bgMusic.pause();
+    }
+    state.bgmPlaying = false;
+  } else if ((el.bgMusic.muted || el.bgMusic.paused) && vol > 0) {
+    ensureAudioSource();
     el.bgMusic.muted = false;
     state.bgmMuted = false;
     playBGM();
@@ -777,18 +800,19 @@ function setMusicVolume(val) {
 
 function updateMusicIcon() {
   if (!el.musicIcon) return;
-  if (state.bgmMuted || state.bgmVolume === 0 || (el.bgMusic && el.bgMusic.muted)) {
+  const isMuted = state.bgmMuted || state.bgmVolume === 0 || !state.bgmPlaying || (el.bgMusic && (el.bgMusic.muted || el.bgMusic.paused));
+  if (isMuted) {
     el.musicIcon.textContent = "🔇";
     if (el.musicPill) el.musicPill.classList.remove("playing");
   } else if (state.bgmVolume < 0.35) {
     el.musicIcon.textContent = "🔈";
-    if (el.musicPill && state.bgmPlaying) el.musicPill.classList.add("playing");
+    if (el.musicPill) el.musicPill.classList.add("playing");
   } else if (state.bgmVolume < 0.7) {
     el.musicIcon.textContent = "🔉";
-    if (el.musicPill && state.bgmPlaying) el.musicPill.classList.add("playing");
+    if (el.musicPill) el.musicPill.classList.add("playing");
   } else {
     el.musicIcon.textContent = "🔊";
-    if (el.musicPill && state.bgmPlaying) el.musicPill.classList.add("playing");
+    if (el.musicPill) el.musicPill.classList.add("playing");
   }
 }
 
