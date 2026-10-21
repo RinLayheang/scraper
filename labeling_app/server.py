@@ -70,6 +70,11 @@ class SkipRequest(BaseModel):
     annotator: str
     session_id: Optional[str] = None
 
+class DropRequest(BaseModel):
+    comment_id: str
+    annotator: str = Field(..., min_length=1)
+    session_id: Optional[str] = None
+
 class EditRequest(BaseModel):
     comment_id: str
     annotator: str
@@ -88,6 +93,8 @@ class LabelStore:
         self.lock = threading.Lock()
         # Active leases: comment_id -> {"annotator": str, "session_id": str, "timestamp": float}
         self.leases: dict[str, dict[str, Any]] = {}
+        # Skipped comments per session (session_id or annotator) so the next claim moves on
+        self.skipped: dict[str, set[str]] = {}
         self.df: pd.DataFrame = self._load_data()
 
     def _load_data(self) -> pd.DataFrame:
@@ -95,6 +102,11 @@ class LabelStore:
             raise FileNotFoundError(f"Primary dataset not found at {self.primary_csv}")
         
         df = pd.read_csv(self.primary_csv, dtype={"comment_id": str})
+
+        # Rows flagged by the earlier soft-drop version are removed for good
+        if "dropped" in df.columns:
+            flagged = df["dropped"].astype(str).str.lower().isin(["true", "1"])
+            df = df[~flagged].drop(columns=["dropped"]).reset_index(drop=True)
         
         # Guarantee comment_id is 100% unique
         if "comment_id" not in df.columns or df["comment_id"].isna().any() or df["comment_id"].duplicated().any():
@@ -239,23 +251,40 @@ class LabelStore:
                     row = self.df[self.df["comment_id"] == cid].iloc[0]
                     return self._format_comment_response(row)
 
-            # 2. Find strictly unlabelled comments not currently leased
+            # 2. Find strictly unlabelled comments not currently leased,
+            #    preferring ones this session has not skipped
+            session_key = session_id or annotator
+            skipped = self.skipped.get(session_key, set())
             unlabeled_indices = self._get_unlabeled_indices()
+            fallback_row = None
 
             for idx in unlabeled_indices:
                 row = self.df.iloc[idx]
                 cid = str(row["comment_id"])
-                if cid not in self.leases:
-                    # Lease this comment exclusively
-                    self.leases[cid] = {
-                        "annotator": annotator,
-                        "session_id": session_id or annotator,
-                        "timestamp": now,
-                    }
-                    return self._format_comment_response(row)
+                if cid in self.leases:
+                    continue
+                if cid in skipped:
+                    if fallback_row is None:
+                        fallback_row = row
+                    continue
+                return self._lease_row(row, annotator, session_key, now)
+
+            # Only comments this session skipped remain: start another pass over them
+            if fallback_row is not None:
+                self.skipped.pop(session_key, None)
+                return self._lease_row(fallback_row, annotator, session_key, now)
 
             # All comments are either labeled or currently leased
             return None
+
+    def _lease_row(self, row: pd.Series, annotator: str, session_key: str, now: float) -> dict[str, Any]:
+        # Lease this comment exclusively
+        self.leases[str(row["comment_id"])] = {
+            "annotator": annotator,
+            "session_id": session_key,
+            "timestamp": now,
+        }
+        return self._format_comment_response(row)
 
     def refresh_lease(self, comment_id: str, annotator: str, session_id: Optional[str] = None) -> bool:
         with self.lock:
@@ -272,6 +301,12 @@ class LabelStore:
                 lease = self.leases[comment_id]
                 if (session_id and lease.get("session_id") == session_id) or lease.get("annotator") == annotator:
                     del self.leases[comment_id]
+
+    def skip_comment(self, comment_id: str, annotator: str, session_id: Optional[str] = None) -> None:
+        """Release the lease and remember the skip so the next claim serves a different comment."""
+        self.release_lease(comment_id, annotator, session_id)
+        with self.lock:
+            self.skipped.setdefault(session_id or annotator, set()).add(comment_id)
 
     def submit_label(
         self,
@@ -300,6 +335,20 @@ class LabelStore:
                 del self.leases[comment_id]
 
             # Atomic save
+            self._save_atomic()
+            return True
+
+    def drop_comment(self, comment_id: str) -> bool:
+        """Permanently delete a bad comment from both dataset CSVs."""
+        with self.lock:
+            mask = self.df["comment_id"] == comment_id
+            if not mask.any():
+                return False
+
+            # reset_index keeps positional lookups (iloc) aligned with index labels
+            self.df = self.df[~mask].reset_index(drop=True)
+            self.leases.pop(comment_id, None)
+
             self._save_atomic()
             return True
 
@@ -368,8 +417,21 @@ def heartbeat(payload: HeartbeatRequest):
 
 @app.post("/api/skip")
 def skip_comment(payload: SkipRequest):
-    store.release_lease(payload.comment_id, payload.annotator, payload.session_id)
+    store.skip_comment(payload.comment_id, payload.annotator, payload.session_id)
     return {"status": "skipped"}
+
+
+@app.post("/api/drop")
+def drop_comment(payload: DropRequest):
+    if not store.drop_comment(payload.comment_id):
+        raise HTTPException(status_code=404, detail="Comment ID not found")
+
+    next_comment = store.claim_comment(payload.annotator, payload.session_id)
+    return {
+        "status": "dropped",
+        "has_next": next_comment is not None,
+        "next_comment": next_comment,
+    }
 
 
 @app.post("/api/release")

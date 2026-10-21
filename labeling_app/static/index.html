@@ -2,7 +2,8 @@
 <html lang="km">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
   <title>KCMS | Collaborative Comment Labeler</title>
   
   <!-- Google Fonts: Kantumruy Pro for Khmer, Inter for English UI -->
@@ -10,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <!-- Top Navigation / Progress Header -->
@@ -19,11 +20,11 @@
       <div class="brand">
         <span class="brand-logo">🛡️</span>
         <div class="brand-text">
-          <h1>KCMS Labeler</h1>
+          <h1>KCMS <span class="brand-suffix">Labeler</span></h1>
           <span class="brand-subtitle">Khmer Comment Moderation System</span>
         </div>
       </div>
-      <div class="sync-status" id="syncStatus">
+      <div class="sync-status" id="syncStatus" title="Synced">
         <span class="status-dot"></span>
         <span class="status-text">Synced</span>
       </div>
@@ -55,18 +56,18 @@
         </div>
       </div>
 
-      <div class="user-pill" id="userPill" title="Click to change name">
+      <div class="user-pill" id="userPill" title="Click to change name" role="button" tabindex="0" aria-label="Change annotator name">
         <span class="user-avatar">👤</span>
         <span class="user-name" id="displayAnnotator">Labeler</span>
       </div>
-      <button class="btn btn-secondary btn-icon" id="btnHistory" title="My Recent Submissions">
-        📜 History
+      <button class="btn btn-secondary btn-icon" id="btnHistory" title="My Recent Submissions" aria-label="History">
+        <span aria-hidden="true">📜</span> <span class="icon-label">History</span>
       </button>
-      <button class="btn btn-secondary btn-icon" id="btnLeaderboard" title="Team Leaderboard">
-        🏆 Leaderboard
+      <button class="btn btn-secondary btn-icon" id="btnLeaderboard" title="Team Leaderboard" aria-label="Leaderboard">
+        <span aria-hidden="true">🏆</span> <span class="icon-label">Leaderboard</span>
       </button>
-      <a href="/api/export" class="btn btn-outline btn-icon" title="Download CSV" download>
-        ⬇️ CSV
+      <a href="/api/export" class="btn btn-outline btn-icon" title="Download CSV" aria-label="Download CSV" download>
+        <span aria-hidden="true">⬇️</span> <span class="icon-label">CSV</span>
       </a>
     </div>
   </header>
@@ -177,7 +178,7 @@
               <input type="checkbox" id="checkPII">
               <span class="toggle-custom"></span>
               <span class="toggle-label">
-                <strong>[P] Has PII</strong>
+                <strong><span class="hotkey-inline">[P] </span>Has PII</strong>
                 <small>(Phone, address, citizen ID, private contact)</small>
               </span>
             </label>
@@ -189,8 +190,11 @@
 
           <!-- Action Submission Bar -->
           <div class="actions-bar">
-            <button class="btn btn-subtle" id="btnQuickHistory" title="View & Edit Previous Comments (Hotkey: H)">
+            <button class="btn btn-subtle btn-quick-history" id="btnQuickHistory" title="View & Edit Previous Comments (Hotkey: H)">
               📜 History <kbd>H</kbd>
+            </button>
+            <button class="btn btn-subtle btn-drop" id="btnDrop" title="Delete incorrect / bad data from the dataset (Hotkey: D)">
+              🗑️ Drop <kbd>D</kbd>
             </button>
             <button class="btn btn-subtle" id="btnSkip" title="Press [S] to skip">
               Skip <kbd>S</kbd>
@@ -221,6 +225,7 @@
       <span class="divider">|</span>
       <span><kbd>↵ Enter</kbd> Submit</span>
       <span><kbd>S</kbd> Skip</span>
+      <span><kbd>D</kbd> Drop</span>
       <span class="divider">|</span>
       <span><kbd>H</kbd> History</span>
       <span><kbd>M</kbd> Music</span>
@@ -401,6 +406,6 @@
   <!-- Background Music Audio Element (Lazy-loaded on user interaction) -->
   <audio id="bgMusic" loop preload="none"></audio>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

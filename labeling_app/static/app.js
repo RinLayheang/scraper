@@ -62,6 +62,7 @@ const el = {
   inputNotes: document.getElementById("inputNotes"),
   btnSubmit: document.getElementById("btnSubmit"),
   btnSkip: document.getElementById("btnSkip"),
+  btnDrop: document.getElementById("btnDrop"),
   btnRefreshStats: document.getElementById("btnRefreshStats"),
 
   // Modals
@@ -145,6 +146,7 @@ function setupEventListeners() {
   // Actions
   el.btnSubmit.addEventListener("click", submitCurrentLabel);
   el.btnSkip.addEventListener("click", skipCurrentComment);
+  el.btnDrop.addEventListener("click", dropCurrentComment);
   if (el.btnRefreshStats) {
     el.btnRefreshStats.addEventListener("click", () => {
       fetchNextComment();
@@ -402,12 +404,14 @@ function resetForm() {
 async function submitCurrentLabel() {
   if (!state.currentComment) return;
 
+  // Hotkey hints only make sense where a keyboard is likely present
+  const isTouch = window.matchMedia("(hover: none)").matches;
   if (state.selectedSeverity === null) {
-    showToast("⚠️ Please select Severity (Keys [1], [2], or [3])");
+    showToast(isTouch ? "⚠️ Please select Severity" : "⚠️ Please select Severity (Keys [1], [2], or [3])");
     return;
   }
   if (state.selectedTarget === null) {
-    showToast("⚠️ Please select Target (Keys [Q], [W], or [E])");
+    showToast(isTouch ? "⚠️ Please select Target" : "⚠️ Please select Target (Keys [Q], [W], or [E])");
     return;
   }
 
@@ -447,11 +451,14 @@ async function submitCurrentLabel() {
   }
 }
 
-async function skipCurrentComment() {
-  if (!state.currentComment) return;
+// Data cleaning: remove an incorrect / junk comment from the training dataset
+async function dropCurrentComment() {
+  if (!state.currentComment || state.dropping) return;
+  state.dropping = true;
+  el.btnDrop.disabled = true;
 
   try {
-    await fetch("/api/skip", {
+    const res = await fetch("/api/drop", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -460,9 +467,51 @@ async function skipCurrentComment() {
         session_id: state.sessionId,
       }),
     });
-    fetchNextComment();
+
+    if (!res.ok) throw new Error("Failed to drop comment");
+
+    const data = await res.json();
+    showToast("🗑️ Dropped from dataset");
+    updateStats();
+
+    if (data.has_next && data.next_comment) {
+      resetForm();
+      renderComment(data.next_comment);
+    } else {
+      fetchNextComment();
+    }
   } catch (err) {
     console.error(err);
+    showToast("Error dropping comment. Please try again.");
+  } finally {
+    state.dropping = false;
+    el.btnDrop.disabled = false;
+  }
+}
+
+async function skipCurrentComment() {
+  if (!state.currentComment || state.skipping) return;
+  state.skipping = true;
+  el.btnSkip.disabled = true;
+
+  try {
+    const res = await fetch("/api/skip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        comment_id: state.currentComment.comment_id,
+        annotator: state.annotator,
+        session_id: state.sessionId,
+      }),
+    });
+    if (!res.ok) throw new Error("Failed to skip comment");
+    await fetchNextComment();
+  } catch (err) {
+    console.error(err);
+    showToast("Error skipping comment. Please try again.");
+  } finally {
+    state.skipping = false;
+    el.btnSkip.disabled = false;
   }
 }
 
@@ -644,6 +693,12 @@ function setupKeyboardShortcuts() {
     else if (key === "s") {
       e.preventDefault();
       skipCurrentComment();
+    }
+
+    // Drop bad data: D
+    else if (key === "d") {
+      e.preventDefault();
+      dropCurrentComment();
     }
 
     // History: H

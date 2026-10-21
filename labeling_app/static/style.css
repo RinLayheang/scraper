@@ -636,10 +636,12 @@ body {
 }
 
 /* Hover States */
-.option-btn:hover {
-  background: var(--bg-card-hover);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-2px);
+@media (hover: hover) {
+  .option-btn:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+  }
 }
 
 /* Selected States */
@@ -774,9 +776,24 @@ body {
 /* Actions Bar */
 .actions-bar {
   display: flex;
-  justify-content: space-between;
+  gap: 8px;
   align-items: center;
 }
+
+.actions-bar .btn-submit {
+  margin-left: auto;
+}
+
+.btn-drop {
+  color: #fca5a5;
+}
+
+.btn-drop:hover {
+  background: var(--harmful-bg);
+  color: var(--harmful-color);
+}
+
+.text-harmful { color: var(--harmful-color); }
 
 .btn-submit {
   padding: 12px 32px;
@@ -983,10 +1000,12 @@ kbd {
   gap: 12px;
 }
 
-.history-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(56, 189, 248, 0.4);
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .history-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(56, 189, 248, 0.4);
+    transform: translateY(-1px);
+  }
 }
 
 .history-item-left {
@@ -1098,97 +1117,126 @@ kbd {
   display: none !important;
 }
 
+
 /* ==========================================================================
-   Mobile 2-Column Zero-Scroll Responsive Design
+   Mobile Responsive Layout (<= 768px)
+   Full-height app shell: header + progress strip on top, the comment fills
+   the free space, annotation controls stay pinned within thumb reach.
    ========================================================================== */
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+
 @media (max-width: 768px) {
   html, body {
-    height: 100dvh;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
+    overscroll-behavior: none;
     touch-action: manipulation;
     -webkit-text-size-adjust: 100%;
   }
 
+  /* Pin the app shell so iOS Safari can't drag the page and tuck the header under the status bar */
   body {
-    display: flex;
-    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    background-attachment: scroll;
   }
 
-  /* Compact Header */
+  /* Header: brand + icon actions on row 1, progress strip on row 2 */
   .app-header {
-    height: 48px;
-    padding: 0 12px;
+    height: auto;
     flex-shrink: 0;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding: calc(6px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+  }
+
+  .header-left {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .brand {
+    gap: 6px;
   }
 
   .brand-logo {
-    font-size: 1.25rem;
+    font-size: 1.3rem;
   }
 
   .brand-text h1 {
-    font-size: 0.95rem;
+    font-size: 1rem;
+    white-space: nowrap;
   }
 
-  .brand-subtitle {
+  .brand-suffix,
+  .brand-subtitle,
+  .sync-status .status-text {
     display: none;
   }
 
   .sync-status {
-    padding: 2px 7px;
-    font-size: 0.68rem;
-    gap: 4px;
+    padding: 6px;
+    gap: 0;
   }
 
   .header-center {
-    display: none;
+    order: 3;
+    flex: 1 0 100%;
+  }
+
+  .progress-info {
+    font-size: 0.7rem;
+    margin-bottom: 4px;
+  }
+
+  .progress-track {
+    height: 5px;
   }
 
   .header-right {
     gap: 6px;
   }
 
-  .music-pill {
-    padding: 3px 6px;
-    gap: 4px;
-  }
-
-  .music-toggle-btn {
-    font-size: 0.9rem;
-  }
-
-  .music-slider {
-    width: 42px;
-    height: 3px;
-  }
-
-  .volume-label {
+  /* Icon-only round header actions */
+  .icon-label,
+  .user-name,
+  .music-volume-container {
     display: none;
   }
 
-  .user-pill {
-    padding: 4px 8px;
-    font-size: 0.75rem;
-    gap: 4px;
+  .music-pill,
+  .user-pill,
+  .header-right .btn-icon {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .user-pill .user-avatar {
-    font-size: 0.8rem;
+  .music-toggle-btn {
+    width: 100%;
+    height: 100%;
+    font-size: 1rem;
   }
 
-  .btn.btn-icon {
-    padding: 5px 8px;
-    font-size: 0.75rem;
-  }
-
-  /* Main Workspace without scroll */
+  /* Main workspace fills the remaining height without page scroll */
   .app-main {
-    flex: 1;
-    padding: 6px 8px 8px 8px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    flex: 1 1 auto;
     min-height: 0;
+    overflow: hidden;
+    padding: 8px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
 
   .workspace-container {
@@ -1199,139 +1247,124 @@ kbd {
     min-height: 0;
   }
 
+  .state-card {
+    margin: auto 0;
+    padding: 40px 20px;
+    border-radius: var(--radius-md);
+  }
+
+  .completed-icon {
+    font-size: 2.75rem;
+  }
+
+  .completed-card h2 {
+    font-size: 1.4rem;
+  }
+
+  .completed-actions {
+    flex-direction: column;
+  }
+
+  .completed-actions .btn {
+    height: 46px;
+  }
+
   .labeling-workspace {
-    height: 100%;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     min-height: 0;
   }
 
-  /* Comment Presentation Card */
+  /* Comment card grows to use all free space; text scrolls inside it */
   .comment-card {
-    padding: 8px 12px;
+    flex: 1 1 auto;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
     margin-bottom: 0;
     border-radius: var(--radius-md);
-    flex-shrink: 0;
   }
 
   .comment-card-header {
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    gap: 8px;
+    align-items: flex-start;
   }
 
   .meta-badge {
     font-size: 0.68rem;
-    padding: 2px 6px;
-  }
-
-  .lease-timer {
-    font-size: 0.68rem;
     padding: 2px 8px;
   }
 
+  .lease-timer {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    padding: 2px 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
   .comment-text-wrapper {
-    display: block;
-    padding: 10px 12px;
-    height: calc(10 * 1.02rem * 1.5 + 20px);
-    min-height: calc(10 * 1.02rem * 1.5 + 20px);
-    max-height: calc(10 * 1.02rem * 1.5 + 20px);
-    overflow-y: auto;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: 12px 14px;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md);
-    scroll-behavior: smooth;
   }
 
   .comment-text-wrapper::-webkit-scrollbar {
     width: 4px;
   }
 
-  .comment-text-wrapper::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-  }
-
-  .comment-text-wrapper::-webkit-scrollbar-thumb {
-    background: rgba(56, 189, 248, 0.45);
-    border-radius: 4px;
-  }
-
   .khmer-text {
-    font-family: 'Kantumruy Pro', 'Inter', sans-serif;
-    font-size: 1.02rem;
-    line-height: 1.5;
-    color: #ffffff;
-    word-break: break-word;
-    white-space: pre-wrap;
-    margin: 0;
-    display: block;
+    font-size: 1.1rem;
+    line-height: 1.6;
   }
 
-  /* Controls Card */
+  /* Controls card: two axis columns, 44px touch targets */
   .controls-card {
     flex: 0 0 auto;
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+    padding: 10px;
     border-radius: var(--radius-md);
-    overflow: hidden;
-    min-height: 0;
   }
 
-  /* 2-Column Axis Layout: Left = Severity Axis | Right = Target Axis */
   .axes-columns-wrapper {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: 8px;
     margin-bottom: 0;
-    flex: 0 0 auto;
-    min-height: 0;
-  }
-
-  .axis-group {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
   }
 
   .axis-header {
-    margin-bottom: 2px;
+    margin-bottom: 4px;
   }
 
   .axis-title {
-    font-size: 0.72rem;
-    font-weight: 700;
+    font-size: 0.7rem;
     color: #cbd5e1;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
 
   .axis-hint {
     display: none;
   }
 
-  /* Within each column, stack the 3 buttons vertically */
   .btn-grid {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    min-height: 0;
+    gap: 6px;
   }
 
   .option-btn {
-    height: 32px;
-    min-height: 32px;
-    max-height: 34px;
-    padding: 0 6px;
-    display: flex;
+    min-height: 44px;
+    padding: 4px 8px;
     align-items: center;
-    justify-content: center;
     text-align: center;
-    border-radius: 7px;
-    border-width: 1.5px;
+    border-radius: 8px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
@@ -1340,31 +1373,31 @@ kbd {
   }
 
   .option-btn:active {
-    transform: scale(0.95);
+    transform: scale(0.97);
   }
 
   .option-btn.selected {
-    transform: scale(0.98);
+    transform: none;
   }
 
-  .option-btn .hotkey {
-    display: none !important;
-  }
-
+  .option-btn .hotkey,
   .option-desc {
-    display: none !important;
+    display: none;
   }
 
   .option-name {
-    font-size: 0.76rem;
-    font-weight: 700;
+    max-width: 100%;
     margin: 0;
-    line-height: 1.15;
-    letter-spacing: 0.01em;
+    font-size: 0.78rem;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* Check mark so the selection does not rely on color alone */
+  .option-btn.selected .option-name::before {
+    content: "\2713  ";
   }
 
   /* Severity Buttons - Mobile Comfortable Palette */
@@ -1471,109 +1504,311 @@ kbd {
     font-weight: 800;
   }
 
-  /* Meta Row */
+  /* PII toggle + notes */
   .meta-row {
-    padding: 3px 0;
-    margin: 3px 0;
-    gap: 6px;
-    flex-shrink: 0;
+    padding: 8px 0;
+    margin: 8px 0;
+    gap: 10px;
   }
 
   .toggle-container {
-    gap: 5px;
+    flex-shrink: 0;
+    min-height: 44px;
+    gap: 8px;
   }
 
   .toggle-custom {
-    width: 15px;
-    height: 15px;
+    width: 22px;
+    height: 22px;
   }
 
   .toggle-label strong {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
   }
 
-  .toggle-label small {
+  .toggle-label small,
+  .hotkey-inline {
     display: none;
   }
 
   .notes-input {
-    padding: 3px 6px;
-    font-size: 0.72rem;
-    height: 26px;
+    height: 40px;
+    padding: 8px 12px;
+    font-size: 16px; /* >= 16px prevents iOS zoom-on-focus */
   }
 
-  /* Action Buttons */
+  /* Action bar */
   .actions-bar {
-    display: flex;
-    gap: 6px;
-    flex-shrink: 0;
+    gap: 8px;
   }
 
-  .btn-submit {
-    flex: 2;
-    padding: 6px 10px;
-    font-size: 0.82rem;
-    height: 34px;
+  .actions-bar .btn {
+    height: 48px;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  /* History stays in the header; the bottom slot becomes Drop */
+  .actions-bar .btn-quick-history {
+    display: none;
+  }
+
+  .actions-bar .btn-submit {
+    margin-left: 0;
+  }
+
+  .actions-bar .btn-drop {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.08);
+    border-color: var(--harmful-border);
   }
 
   .btn-subtle {
-    flex: 1;
-    padding: 6px 6px;
-    font-size: 0.75rem;
-    height: 34px;
+    flex: 1 1 0;
+    padding: 0 8px;
+    font-size: 0.82rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-color);
+    color: var(--text-main);
+  }
+
+  .btn-submit {
+    flex: 2 1 0;
+    padding: 0 12px;
+    font-size: 0.95rem;
+  }
+
+  .btn-primary:hover {
+    transform: none;
   }
 
   kbd {
     display: none;
   }
 
-  /* Hide hotkey footer on touch/mobile devices */
   .hotkey-footer {
     display: none !important;
   }
 
-  /* Leaderboard modal adjustments */
-  .stats-cards-grid {
-    grid-template-columns: repeat(2, 1fr);
+  /* Toast sits under the header so it never covers the Submit button */
+  .toast {
+    top: calc(env(safe-area-inset-top) + 92px);
+    bottom: auto;
+    max-width: calc(100vw - 32px);
+    text-align: center;
+  }
+
+  /* Modals become bottom sheets */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-box,
+  .modal-box.modal-wide {
+    min-width: 0; /* flex item would otherwise grow to fit nowrap table / long IDs */
+    max-width: 100%;
+    max-height: 92vh;
+    max-height: 92dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-bottom: none;
+    animation: sheet-in 0.22s ease-out;
+  }
+
+  .modal-header {
+    position: sticky;
+    top: -18px;
+    z-index: 2;
+    gap: 8px;
+    margin: -18px 0 12px;
+    padding: 18px 0 10px;
+    background: var(--bg-secondary);
+  }
+
+  .modal-header h3 {
+    font-size: 1.05rem;
+  }
+
+  .btn-close {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    margin-right: -10px;
+    font-size: 1.75rem;
+  }
+
+  .modal-title-group {
+    min-width: 0;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
-  .modal-box {
-    padding: 18px;
-    max-height: 90vh;
+  #editModalTitle {
+    min-width: 0;
+    font-size: 0.95rem;
+  }
+
+  #badgeEditId,
+  .history-item .id-badge {
+    word-break: break-all;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+  }
+
+  .modal-input {
+    font-size: 16px;
+  }
+
+  .modal-footer {
+    gap: 8px;
+  }
+
+  .modal-footer .btn {
+    flex: 1;
+    height: 46px;
+  }
+
+  /* Name prompt stays centered so the keyboard cannot hide it */
+  #annotatorModal {
+    align-items: center;
+    padding: 16px;
+  }
+
+  #annotatorModal .modal-box {
+    border-radius: var(--radius-lg);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 18px;
+  }
+
+  /* Leaderboard */
+  .stats-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    padding: 12px 8px;
+  }
+
+  .stat-value {
+    font-size: 1.35rem;
+  }
+
+  .stat-label {
+    font-size: 0.68rem;
+  }
+
+  .leaderboard-table-container {
+    margin-bottom: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    font-size: 0.8rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px;
+    white-space: nowrap;
+  }
+
+  /* History list: stack text above labels */
+  .history-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .history-item-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .history-text {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .history-actions {
+    justify-content: space-between;
+  }
+
+  .btn-edit-history-item {
+    min-height: 36px;
+    padding: 6px 14px;
+  }
+
+  /* Edit sheet */
+  .edit-comment-preview {
+    max-height: 22vh;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+
+  .edit-comment-preview .khmer-text {
+    font-size: 1.05rem;
   }
 }
 
-/* Compact adaptation for ultra-short viewports (e.g. landscape mode or height <= 520px) */
-@media (max-width: 768px) and (max-height: 520px) {
-  .app-header {
-    height: 38px;
+/* Very narrow phones (e.g. 320px) */
+@media (max-width: 350px) {
+  .music-pill,
+  .user-pill,
+  .header-right .btn-icon {
+    width: 34px;
+    height: 34px;
   }
-  .comment-text-wrapper {
-    height: calc(3 * 1.05rem * 1.55 + 16px);
-    min-height: calc(3 * 1.05rem * 1.55 + 16px);
-    max-height: calc(3 * 1.05rem * 1.55 + 16px);
-    padding: 6px 8px;
+
+  .header-right {
+    gap: 4px;
   }
-  .khmer-text {
-    font-size: 0.95rem;
-    line-height: 1.45;
-  }
-  .option-btn {
-    height: 32px;
-    min-height: 32px;
-    max-height: 34px;
-    padding: 0 6px;
-  }
+
   .option-name {
+    font-size: 0.72rem;
+  }
+
+  .toggle-label strong {
     font-size: 0.75rem;
   }
-  .btn-submit, .btn-subtle {
-    padding: 6px 10px;
-    font-size: 0.8rem;
+}
+
+/* Short viewports (small phones, keyboard open): let the page scroll instead of squeezing */
+@media (max-width: 768px) and (max-height: 600px) {
+  html, body {
+    height: auto;
+    overflow: auto;
   }
-  .meta-row {
-    padding: 2px 0;
-    margin: 2px 0;
+
+  body {
+    position: static;
+  }
+
+  .app-main,
+  .workspace-container,
+  .labeling-workspace {
+    height: auto;
+    overflow: visible;
+  }
+
+  .comment-card {
+    min-height: 0;
+  }
+
+  .comment-text-wrapper {
+    flex: none;
+    height: 32vh;
+    min-height: 96px;
   }
 }

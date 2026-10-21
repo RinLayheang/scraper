@@ -150,6 +150,7 @@ For high-speed labeling, use your keyboard without touching the mouse:
 | <kbd>E</kbd> | Select **INSTITUTION (2)** |
 | <kbd>P</kbd> | Toggle **Contains PII** checkbox |
 | <kbd>S</kbd> | **Skip** comment (returns it to queue) |
+| <kbd>D</kbd> | **Drop** incorrect / bad data (permanently deletes the row from `cleaned_comments.csv` and `ai_engine/data/comments.csv`) |
 | <kbd>Enter</kbd> | **Submit & Next** (submits rating and claims next comment) |
 | <kbd>H</kbd> | Open **History** modal |
 | <kbd>M</kbd> | **Mute / Unmute** background music |
